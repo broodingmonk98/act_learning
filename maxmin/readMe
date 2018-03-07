@@ -1,0 +1,16 @@
+first.py is the main file from where other modules are called. 
+
+Different active learners are implemented via separate classes.
+
+For doing tradeoff experiments, run the application via the command " python first.py tradeoff active_learning_method" where the active_learning_method will be replaced by minmax, minsum, minmin, maxquery, minmaxvar or random.
+
+For each of the active selection techniques separate classes are written inside active_learners.py file. 
+
+Learners.py contains all the functionalities which are common for all active learning techniques. 
+
+PDSparse folder contains the pdsparse code which is used by a wrapper module in learners.py file.
+
+min_max_l2distance contains scalable code of active learning for minmax approach which we discarded later. 
+
+
+
