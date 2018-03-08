@@ -12,6 +12,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 vectorizer = TfidfVectorizer();
 vectors = vectorizer.fit_transform(newsgroups_train.data);
+##nnz data indices indptr has_sortedindices
 print(vectors.shape);
 
 from sklearn.svm import LinearSVC
@@ -21,7 +22,7 @@ randomErr = [];
 randomTrainX = [];
 randomTrainY = [];
 
-X_train, X_test, y_train, y_test = cross_validation.train_test_split(vectors, newsgroups_train.target,test_size=0.9)
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(vectors, newsgroups_train.target,test_size=0.2)
 def getRandom():
     point = np.random.rand()*X_train.shape[0];
     point = int(point);
@@ -29,12 +30,14 @@ def getRandom():
     X = X_train[point];
     return X,y;
 
-def ClosestToLine(hyperplane,points,intercept,number):
+def ClosestToLine(hyperplane,points,intercept,number,alreadyThere):
     """Calculates distance vector from points to hyperplane"""
-    print(type(points.data));
-    print(size(points.data));
-    dist = abs(np.matmul(points,hyperplane)+intercept);
-    return dist.argsort()[:number];
+##nnz data indices indptr has_sortedindices
+    dist = abs(points._mul_vector(hyperplane)+intercept);
+    mask = np.zeros(dist.shape, dtype=bool);
+    mask[alreadyThere] = True;
+    dist[mask] = float('-inf');
+    return dist.argsort()[-number:];
 
 newsgroups_test = fetch_20newsgroups(subset='test',remove=('headers','footers',
                                             'quotes'));#categories=cats);
@@ -43,33 +46,45 @@ vectors_test = vectorizer.transform(newsgroups_test.data);
 randomTrainX,randomTrainY = X_train[:10],y_train[:10]
 
 i=0;
-while i < 300:
+while i < 2500:
     #X,y = getRandom();
-    randomTrainX = X_train[:i+10];
-    randomTrainY = y_train[:i+10];
+    randomTrainX = X_train[:i+50];
+    randomTrainY = y_train[:i+50];
     #randomTrainvectorsX = vectorizer.transform(randomTrainX);
     clf.fit(randomTrainX, randomTrainY);
     pred = clf.predict(vectors_test);
 
     randomErr.append(metrics.f1_score(newsgroups_test.target, pred,
                         average='macro'));
-    i=i+10;
+    i=i+50;
     print("Iteration :"+str(i)+"\t\tError :"+str(randomErr[-1]));
-    print(clf.intercept_[0]);
 
 i=0;
 ClosestTrainX,ClosestTrainY = X_train[:10],y_train[:10]
 closestErr=[];
-print(type(X_train));
-print(X_train[0].shape);
-print(clf.coef_[0])
-while i<300:
-        points=ClosestToLine(clf.coef_[0],X_train,clf.intercept_[0],10);
-        print(points);
-        i += 10;
+clf.fit(ClosestTrainX,ClosestTrainY);
+#print(type(X_train));
+#print(X_traiXn[0].shape);
+print("\nSmart select : \n\n\n\n\n");
+#print(clf.coXef_[0])
+points = np.array([0,1,2,3,4,5,6,7,8,9])
+while i<2500:
+    points =np.concatenate((points,ClosestToLine(clf.coef_[0],X_train,clf.intercept_[0],50,points)));
+    print((points));
+    ClosestTrainX=X_train[points]
+    ClosestTrainY=y_train[points]
+    clf.fit(ClosestTrainX,ClosestTrainY);
+    pred = clf.predict(vectors_test);
+    closestErr.append(metrics.f1_score(newsgroups_test.target, pred,
+                    average='macro'));
+    i += 50;
+    print("Iteration :"+str(i)+"\t\tError :"+str(closestErr[-1]));
+    print("Unique = "+str(len(np.unique(points))));
 
 import matplotlib.pyplot as plt
-plt.plot(randomErr);
+line1 = plt.plot(randomErr,label='Random');
+line2 = plt.plot(closestErr,label='Smart search');
+#plt.legend((line1,line2),('random','smart'))
 plt.show();
 
 #import numpy as np
