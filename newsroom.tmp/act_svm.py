@@ -1,48 +1,57 @@
 from sklearn.datasets import fetch_20newsgroups
-from sklearn import cross_validation
+from sklearn import cross_validation,metrics
+from sklearn.svm import LinearSVC
 import numpy as np
-
-#cats = ['alt.atheism', 'sci.space']
-newsgroups_train = fetch_20newsgroups(subset='train',#categories=cats,
-                                    remove=('headers','footers','quotes'));
 from pprint import pprint
-pprint(list(newsgroups_train.target_names));
-
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+#cats = ['alt.atheism', 'sci.space']
+#Getting data
+newsgroups_train = fetch_20newsgroups(subset='train',#categories=cats,
+                                    remove=('headers','footers','quotes'));
+
+newsgroups_test = fetch_20newsgroups(subset='test',remove=('headers','footers',
+                                            'quotes'));#categories=cats);
+
+#Convert data to suitable form
 vectorizer = TfidfVectorizer();
 vectors = vectorizer.fit_transform(newsgroups_train.data);
+vectors_test = vectorizer.transform(newsgroups_test.data);
+
+#Organize data
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(vectors, newsgroups_train.target,test_size=0.2)
+
+pprint(list(newsgroups_train.target_names));
 ##nnz data indices indptr has_sortedindices
 print(vectors.shape);
 
-from sklearn.svm import LinearSVC
-from sklearn import metrics
-clf = LinearSVC();
-randomErr = [];
-randomTrainX = [];
-randomTrainY = [];
 
-X_train, X_test, y_train, y_test = cross_validation.train_test_split(vectors, newsgroups_train.target,test_size=0.2)
-def getRandom():
-    point = np.random.rand()*X_train.shape[0];
-    point = int(point);
-    y = y_train[point];
-    X = X_train[point];
-    return X,y;
+#Set up classifer
+clf = LinearSVC();
+
+#a few useful functions
+#def getRandom():
+#    """Returns a few random poinst"""
+#    point = np.random.rand()*X_train.shape[0];
+#    point = int(point);
+#    y = y_train[point];
+#    X = X_train[point];
+#    return X,y;
 
 def ClosestToLine(hyperplane,points,intercept,number,alreadyThere):
-    """Calculates distance vector from points to hyperplane"""
+    """Returns 'number' of points closest to the hyperplane"""
 ##nnz data indices indptr has_sortedindices
     dist = abs(points._mul_vector(hyperplane)+intercept);
     mask = np.zeros(dist.shape, dtype=bool);
     mask[alreadyThere] = True;
-    dist[mask] = float('-inf');
-    return dist.argsort()[-number:];
+    dist[mask] = float('inf');
+    return dist.argsort()[:number];
 
-newsgroups_test = fetch_20newsgroups(subset='test',remove=('headers','footers',
-                                            'quotes'));#categories=cats);
-vectors_test = vectorizer.transform(newsgroups_test.data);
 
+#Random Training
+randomErr = [];
+randomTrainX = [];
+randomTrainY = [];
 randomTrainX,randomTrainY = X_train[:10],y_train[:10]
 
 i=0;
@@ -59,6 +68,9 @@ while i < 2500:
     i=i+50;
     print("Iteration :"+str(i)+"\t\tError :"+str(randomErr[-1]));
 
+#END OF RANDOM TRAINING
+
+#Train using closest points to hyperplane
 i=0;
 ClosestTrainX,ClosestTrainY = X_train[:10],y_train[:10]
 closestErr=[];
@@ -69,8 +81,10 @@ print("\nSmart select : \n\n\n\n\n");
 #print(clf.coXef_[0])
 points = np.array([0,1,2,3,4,5,6,7,8,9])
 while i<2500:
-    points =np.concatenate((points,ClosestToLine(clf.coef_[0],X_train,clf.intercept_[0],50,points)));
-    print((points));
+    points =np.concatenate((points,ClosestToLine(clf.coef_[0], #indices of closest points
+                        X_train,clf.intercept_[0],50,points)));
+
+    #print((points));
     ClosestTrainX=X_train[points]
     ClosestTrainY=y_train[points]
     clf.fit(ClosestTrainX,ClosestTrainY);
@@ -82,9 +96,9 @@ while i<2500:
     print("Unique = "+str(len(np.unique(points))));
 
 import matplotlib.pyplot as plt
-line1 = plt.plot(randomErr,label='Random');
-line2 = plt.plot(closestErr,label='Smart search');
-#plt.legend((line1,line2),('random','smart'))
+line1 = plt.plot(randomErr,'r+',label='Random');
+line2 = plt.plot(closestErr,'go',label='Smart search');
+plt.legend();
 plt.show();
 
 #import numpy as np
